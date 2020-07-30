@@ -25,13 +25,11 @@ from airflow.contrib.operators.bigquery_operator import BigQueryOperator
 from airflow.contrib.operators.gcs_to_bq import GoogleCloudStorageToBigQueryOperator;
 
 # config variables
-#dataset for examples
-dm_ex=models.Variable.get('gcp_schema_bigquery');
-#dataset storage
+#data storage
 stg=models.Variable.get('stg_dataset');
-#dataset warehouse
+#data warehouse
 dw=models.Variable.get('dw_dataset');
-#dataset mart for exploit
+#data mart for exploit
 dm=models.Variable.get('dm_dataset');
 
 args = {
@@ -44,25 +42,14 @@ dag = models.DAG(
     schedule_interval=None
 )
 
-# [START howto_operator_gcs_to_bq]
-load_table_a = GoogleCloudStorageToBigQueryOperator(
-    task_id='load_table_a',
-    bucket='fs-storage-cb-sh',
-    source_objects=['/LPMXfile_table_a_YYMMDD.txt'],
-    field_delimiter='|',
-    destination_project_dataset_table='gcp_schema_bigquery.gcp_table_a',
+create_tables_from_sql_bucket = BigQueryOperator(
+    task_id='creating_tables',
+    sql='fs-storage-cb-sh/tables/*.sql',
     write_disposition='WRITE_TRUNCATE',
-    dag=dag)
-
-# [END howto_operator_gcs_to_bq]
-copy_data_to_b = BigQueryOperator(
-    task_id='copy_data_to_b',
-    bucket='fs-storage-cb-sh',
-    sql='insert into {0}.TABLE_B select * from {1}.gcp_table_a '.format(dm_ex,dm_ex),
-    big_query_conn_id='bigquery_default',
-    write_disposition='WRITE_TRUNCATE',
+    bigquery_conn_id ='bigquery_default',
     allow_large_results=True,
     use_legacy_sql=False,
     dag=dag)
 
-load_table_a >> copy_data_to_b
+
+create_tables_from_sql_bucket
